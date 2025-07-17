@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "pack:new": "kintone-plugin-packer --out dist/plugin.zip src",
+    "pack": "kintone-plugin-packer --out dist/plugin.zip --ppk dist/private.ppk src",
+    "build": "webpack --mode production",
+    "develop": "webpack --mode development --watch",
+    "upload": "source .env && kintone-plugin-uploader dist/plugin.zip --watch --base-url $KINTONE_BASE_URL --username $KINTONE_USERNAME --password $KINTONE_PASSWORD --waiting-dialog-ms 3000",
+    "start": "npm-run-all --parallel develop upload"
+  },
+  "devDependencies": {
+    "@kintone/plugin-packer": "^8.2.1",
+    "@kintone/plugin-uploader": "^9.1.5",
+    "@kintone/webpack-plugin-kintone-plugin": "^8.0.11",
+    "css-loader": "^7.1.2",
+    "npm-run-all": "^4.1.5",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  }
+}

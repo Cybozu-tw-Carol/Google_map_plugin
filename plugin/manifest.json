@@ -1,0 +1,29 @@
+{
+  "manifest_version": 1,
+  "version": 1,
+  "type": "APP",
+  "name": {
+    "ja": "Google map api plugin",
+    "en": "Google map api plugin",
+    "zh-TW": "Google map api plugin"
+  },
+  "description": {
+    "ja": "これはGoogle map api pluginです。",
+    "en": "This is Google map api plugin",
+    "zh-TW": "這是一個Google map api plugin"
+  },
+  "icon": "image/icon.png",
+  "desktop": {
+    "js": [
+      "js/customize.js"
+    ]
+  },
+  "config": {
+    "html": "html/config.html",
+    "js": [
+      "https://unpkg.com/kintone-ui-component/umd/kuc.min.js",
+      "https://js.cybozu.com/kintone-rest-api-client/5.7.1/KintoneRestAPIClient.min.js",
+      "js/config.js"
+    ]
+  }
+}
