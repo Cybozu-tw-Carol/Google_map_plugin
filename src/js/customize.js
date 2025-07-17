@@ -39,6 +39,7 @@
     map.appendChild(img)
 
   })
+
   kintone.events.on(['app.record.create.submit', 'app.record.edit.submit',], async event => {
     const { record } = event
 
@@ -71,6 +72,7 @@
     }
 
   })
+  
 function setError(message, event) {
   event.error = message;
   console.warn(message);
