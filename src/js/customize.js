@@ -17,9 +17,9 @@
     const { record } = event
     const map = kintone.app.record.getSpaceElement(mapField)
 
-    if (!map) return setError(`找不到設定的空白欄位 ${mapField}，請確定欄位是否存在`, event);
+    if (!map) return alert(`找不到設定的空白欄位 ${mapField}，請確定欄位是否存在`);
     if (!record[latField] || !record[lngField]) {
-      return setError('設定的緯經度欄位不存在於此應用，請檢查設定', event);
+      return alert('設定的緯經度欄位不存在於此應用，請檢查外掛設定或是欄位代碼');
     }
     let lat = record[latField].value
     let lng = record[lngField].value
