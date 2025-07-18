@@ -30,50 +30,34 @@ import createUI from './UI';
     map.value = config.mapField || ''
     mapAPI.value = config.mapAPI || ''
   }
-  
-  saveBtn.addEventListener('click', async event => {
-      if (!address.value || !lat.value || !lng.value || !geocodeAPI.value || !mapAPI.value || !map.value) {
-        alert('請填寫所有欄位！')
-        return
-      }
 
-      const fields = {
-        addressField: { label: '地址欄位', value: address.value },
-        latField: { label: '緯度欄位', value: lat.value },
-        lngField: { label: '經度欄位', value: lng.value },
-        mapField: { label: '地圖欄位', value: map.value },
-        mapAPI: { label: 'Maps API Token', value: mapAPI.value },
-      };
-      //檢查重複欄位
-      if (validateDuplicateFields(fields)) {
-        return;
-      }
-      
-      const pluginConfig = {};
-      for (const key in fields) {
-        pluginConfig[key] = fields[key].value ? String(fields[key].value) : '';
-      }
+  saveBtn.addEventListener('click', event => {
+    if (!address.value || !lat.value || !lng.value || !geocodeAPI.value || !mapAPI.value || !map.value) {
+      alert('請填寫所有欄位！')
+      return
+    }
 
-      await kintone.plugin.app.setProxyConfig(URL, 'GET', {}, { 'key': geocodeAPI.value ? String(geocodeAPI.value) : '' })
-      /**
-       * 此處發現疑似setProxyConfig跟setConfig進行的話會發生錯誤，
-       * 因此設置setTimeout避免DB更新400錯誤
-       * 錯誤訊息：{
-       *    "code": "GAIA_DA02",
-       *    "messageType": "text",
-       *    "success": false,
-       *    "id": "auwy2Zz2CMXOZPimSWmQ",
-       *    "message": "資料庫鎖定失敗，無法儲存變更。請稍後再試。"
-       * }
-       */
-      setTimeout(async () => {
-        try {
-          await kintone.plugin.app.setConfig(pluginConfig);
-        } catch (err) {
-          console.error('setConfig 發生錯誤', err);
-          alert(`setConfig 錯誤：${err.message || err}`);
-        }
-      }, 300); 
+    const fields = {
+      addressField: { label: '地址欄位', value: address.value },
+      latField: { label: '緯度欄位', value: lat.value },
+      lngField: { label: '經度欄位', value: lng.value },
+      mapField: { label: '地圖欄位', value: map.value },
+      mapAPI: { label: 'Maps API Token', value: mapAPI.value },
+    };
+    //檢查重複欄位
+    if (validateDuplicateFields(fields)) {
+      return;
+    }
+
+    const pluginConfig = {};
+    for (const key in fields) {
+      pluginConfig[key] = fields[key].value
+    }
+    
+    kintone.plugin.app.setProxyConfig(URL, 'GET', {}, { 'key': geocodeAPI.value }, () => {
+      kintone.plugin.app.setConfig(pluginConfig);
+    })
+
   })
 
   cancelBtn.addEventListener('click', () => {
