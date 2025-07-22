@@ -1,9 +1,10 @@
-.btn {
+.btnSpace {
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid gray;
   margin-top: 60px;
   padding-top: 30px;
+  gap: 8px; 
 }
 .fieldSpace{
   display: flex;

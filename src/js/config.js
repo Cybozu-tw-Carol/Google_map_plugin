@@ -1,61 +1,78 @@
-import '../../plugin/css/style.css'
-import createUI from './UI';
+import { createComponent, appendChildren, getFieldOptions } from './UI';
 
 (async (PLUGIN_ID) => {
   'use strict'
   const URL = `https://maps.googleapis.com/maps/api/geocode/json`
+
+  const req = new KintoneRestAPIClient()
   const appId = kintone.app.getId()
-  const container = document.querySelector('#plugin-setting-container')
+  const fieldSpace = document.querySelector('.fieldSpace')
+  const btnSpace = document.querySelector('.btnSpace')
+  const { properties } = await req.app.getFormFields({
+    app: appId
+  })
+  const text = getFieldOptions(properties, ['SINGLE_LINE_TEXT'])
 
-  const {
-    elements: { fieldSpace, btnSpace, saveBtn, cancelBtn },
-    fields: { map, address, lat, lng, geocodeAPI, mapAPI }
-  } = await createUI(appId);
-
-  container.appendChild(fieldSpace)
-  container.appendChild(btnSpace)
-
+  //Definition config fields
+  const CONFIG_FIELD = [
+    { field: 'addressField', label: '地址欄位', type: 'dropdown', value: text },
+    { field: 'latField', label: '座標lat欄位', type: 'dropdown', value: text },
+    { field: 'lngField', label: '座標lng欄位', type: 'dropdown', value: text },
+    { field: 'mapField', label: '地圖顯示欄位', type: 'text', value: '' },
+    { field: 'mapAPI', label: 'Maps Static API Token', type: 'text', value: '' },
+    { field: 'geocodeAPI', label: 'Maps Static API Token', type: 'text', value: '' },
+    { field: 'saveBtn', label: '保存', type: 'button', value: 'submit' },
+    { field: 'cancelBtn', label: '取消', type: 'button', value: 'normal' },
+  ]
   const proxyConfig = kintone.plugin.app.getProxyConfig(URL, 'GET')
-  const config = kintone.plugin.app.getConfig(PLUGIN_ID);
-  const headers = proxyConfig.data
+  const config = kintone.plugin.app.getConfig(PLUGIN_ID)
 
-  if (headers) {
-    geocodeAPI.value = headers.key || '';
-  }
+  CONFIG_FIELD.forEach(key => {
+    //Create UI Components
+    key.component = createComponent(key.type, key.label, key.value)
+    const container = key.type === 'button' ? btnSpace : fieldSpace
+    appendChildren(container, key.component)
 
-  if (config) {
-    address.value = config.addressField || ''
-    lat.value = config.latField || ''
-    lng.value = config.lngField || ''
-    map.value = config.mapField || ''
-    mapAPI.value = config.mapAPI || ''
-  }
+    //Get ProxyConfig and Config information
+    if (proxyConfig?.data && key.field === 'geocodeAPI') {
+      key.component.value = proxyConfig.data.key || ''
+    }
+    if (config) {
+      if (key.type !== 'button' && config[key.field] !== undefined) {
+        key.component.value = config[key.field]
+      }
+    }
+  })
 
-  saveBtn.addEventListener('click', event => {
-    if (!address.value || !lat.value || !lng.value || !geocodeAPI.value || !mapAPI.value || !map.value) {
-      alert('請填寫所有欄位！')
+  //Set EventListener
+  const saveBtn = (CONFIG_FIELD.find(key => key.field === 'saveBtn')).component
+  const cancelBtn = (CONFIG_FIELD.find(key => key.field === 'cancelBtn')).component
+
+  saveBtn.addEventListener('click', () => {
+    //Check fields that are missing value
+    const missingFields = CONFIG_FIELD
+      .filter(({ field, type }) => type !== 'button')
+      .filter(({ component }) => !component.value)
+      
+    if (missingFields.length > 0) {
+      const labels = missingFields.map(f => f.label).join('、')
+      alert(`請填寫以下欄位：${labels}`)
       return
     }
 
-    const fields = {
-      addressField: { label: '地址欄位', value: address.value },
-      latField: { label: '緯度欄位', value: lat.value },
-      lngField: { label: '經度欄位', value: lng.value },
-      mapField: { label: '地圖欄位', value: map.value },
-      mapAPI: { label: 'Maps API Token', value: mapAPI.value },
-    };
-    //檢查重複欄位
-    if (validateDuplicateFields(fields)) {
-      return;
-    }
+    //Check duplicate fields
+    if (validateDuplicateFields(CONFIG_FIELD)) return
 
-    const pluginConfig = {};
-    for (const key in fields) {
-      pluginConfig[key] = fields[key].value
-    }
-    
-    kintone.plugin.app.setProxyConfig(URL, 'GET', {}, { 'key': geocodeAPI.value }, () => {
-      kintone.plugin.app.setConfig(pluginConfig);
+    // Set Config
+    const setConfigFields = Object.fromEntries(
+      CONFIG_FIELD
+        .filter(({ type, field }) => type !== 'button' && field !== 'geocodeAPI')
+        .map(({ field, component }) => [field, component.value])
+    );
+    const geocodeAPI = (CONFIG_FIELD.find(key => key.field === 'geocodeAPI')).component.value
+
+    kintone.plugin.app.setProxyConfig(URL, 'GET', {}, { 'key': geocodeAPI }, () => {
+      kintone.plugin.app.setConfig(setConfigFields)
     })
 
   })
@@ -67,29 +84,34 @@ import createUI from './UI';
   /**
    * 檢查欄位設定中是否有重複指定相同的欄位（例如兩個欄位都選了「地址」）
    *
-   * @param {Object} fields - 欄位設定物件，格式為 { key: { label, value } }
-   * @param {string[]} [excludeKeys=['mapAPI']] - 要排除檢查的欄位 key
+   * @param {Object} fields - 欄位設定陣列，格式為 [{ key: value }]
    * @returns {boolean} - 有重複時回傳 true，並顯示錯誤訊息
    */
-  function validateDuplicateFields(fields, excludeKeys = ['mapAPI']) {
-    const duplicates = Object.entries(fields)
-      .filter(([key]) => !excludeKeys.includes(key))
-      .reduce((acc, [key, { label, value }]) => {
-        acc[value] = acc[value] || [];
-        acc[value].push(label);
-        return acc;
-      }, {});
+  function validateDuplicateFields(fields) {
+    const dropdowns = fields.filter(({ type, field }) => type === 'dropdown')
+    const valueMap = new Map()
+    const duplicate = []
 
-    const repeated = Object.entries(duplicates).filter(([, labels]) => labels.length > 1);
+    dropdowns.forEach(({ field, label, component }) => {
+      const value = component.value;
+      if (!valueMap.has(value)) {
+        valueMap.set(value, [])
+      }
+      valueMap.get(value).push(label)
+    });
 
-    if (repeated.length > 0) {
-      const messages = repeated.map(
-        ([val, labels]) => `「${labels.join('」、')}」填入了相同欄位值（${val}）`
-      );
-      console.warn('請修正以下重複設定：\n' + messages.join('\n'));
-      alert('請修正以下重複設定：\n' + messages.join('\n'));
-      return true;
+    valueMap.forEach((fields, val) => {
+      if (fields.length > 1) {
+        duplicate.push(`「${fields.join('」、「')}」填入了相同欄位值（${val}）`)
+      }
+    });
+
+    if (duplicate.length > 0) {
+      alert(duplicate.join('\n'))
+      console.warn(duplicate.join('\n'))
+      return true
     }
+
     return false;
   }
 })(kintone.$PLUGIN_ID)

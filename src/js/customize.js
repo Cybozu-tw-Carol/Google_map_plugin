@@ -13,6 +13,15 @@
     mapAPI = ''
   } = config || {};
 
+  // Disabled the lat and lng fields
+  kintone.events.on(['app.record.create.show','app.record.edit.show',], event => {
+    const { record } = event
+    record[latField].disabled = true
+    record[lngField].disabled = true
+    return event
+  })
+
+  // Show google static map
   kintone.events.on('app.record.detail.show', event => {
     const { record } = event
     const map = kintone.app.record.getSpaceElement(mapField)
@@ -40,7 +49,8 @@
 
   })
 
-  kintone.events.on(['app.record.create.submit', 'app.record.edit.submit',], async event => {
+  // Get lat and lng from GEOCODE api
+  kintone.events.on(['app.record.create.submit', 'app.record.edit.submit'], async event => {
     const { record } = event
 
     const missingFields = Object.entries(config).filter(([key, value]) => {
@@ -70,12 +80,11 @@
     } catch (error) {
       return setError(`地址查詢時發生錯誤：${error.message}`, event);
     }
-
   })
-  
-function setError(message, event) {
-  event.error = message;
-  console.warn(message);
-  return event;
-}
+
+  function setError(message, event) {
+    event.error = message;
+    console.warn(message);
+    return event;
+  }
 })(kintone.$PLUGIN_ID)
